@@ -1,0 +1,86 @@
+\documentclass[a4paper,11pt]{article}
+
+\usepackage{cite}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{graphicx}
+\usepackage{fancyheadings}
+\usepackage{geometry}
+\usepackage{multicol}
+\usepackage{amsmath}
+\usepackage[]{mcode}
+\usepackage{pdfpages}
+
+ \newcommand{\ba}[1]{\begin{align*}    #1    \end{align*}}
+ \newcommand{\ban}[1]{\begin{align}    #1    \end{align}}
+ \renewcommand{\vec}[1]{\mathbf{#1}}
+
+ \definecolor{light-gray}{gray}{0.95}
+
+\setlength{\headsep}{1in}
+
+\pagestyle{fancy}
+
+\lhead{ridenour@kth.se \\ herczka@kth.se}
+\rhead{Parallel Programming for Large-Scale Problems SF2568}
+\title{Parallel Programming for Large-Scale Problems SF2568 \\
+Teacher: Michael Hanke \\
+Homework 2: The Jacobi Iteration}
+\author{Jonathan Ridenour, 780514-7779\\
+Mateusz Herczka, 700624-9234}
+
+\begin{document}
+\lstdefinestyle{customc}{
+ backgroundcolor=\color{light-gray},
+  belowcaptionskip=1\baselineskip,
+  breaklines=true,
+  frame=L,
+  xleftmargin=\parindent,
+  language=C,
+  showstringspaces=false,
+  basicstyle=\footnotesize\ttfamily,
+  keywordstyle=\bfseries\color{green!40!black},
+  commentstyle=\itshape\color{purple!40!black},
+  identifierstyle=\color{blue},
+  stringstyle=\color{orange},
+}
+
+\lstdefinestyle{output}{
+ backgroundcolor=\color{light-gray},
+ language=bash,
+ xleftmargin=\parindent,
+ keywordstyle=\color{blue},
+ basicstyle=\ttfamily,
+ morekeywords={peter@kbpet},
+ %alsoletter={:~$},
+ morekeywords=[2]{peter@kbpet:},
+}
+\maketitle
+\pagebreak
+\section*{Task 1}
+\section*{Task 2}
+\section*{Task 3}
+We now consider the 1-dimensional differential equation
+\ba{
+u'' + r(x)u = & \ f(x), \ \ \ \ \ 0<x<1,\\
+u(0) = & \  u(1) = 0,
+}
+where
+\ba{
+r(x) = & \ x^3,\\
+f(x) = & \ \frac{-1}{x^{1.5}}.
+}
+
+%\begin{figure}
+%\makebox[\textwidth][c]{\includegraphics[width=1.2\textwidth]{brot3}}
+%  \caption{Zoom 2.}
+%  \label{fig:brot3}
+%\end{figure}
+
+\section*{Appendix}
+\begin{lstlisting}[style=customc]
+\end{lstlisting}
+%\begin{thebibliography}{}
+%\bibitem{Wilkinson} Barry Wilkinson, Michael Allen {\it Parallel Programming, Techniques and Applications Using Networked Workstations and Parallel Computers}, 2005, Pearson Prentice Hall, pp 9.
+%\end{thebibliography}
+\end{document}
