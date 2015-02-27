@@ -58,8 +58,62 @@ Mateusz Herczka, 700624-9234}
 \maketitle
 \pagebreak
 \section*{Task 1}
+\subsection*{a)}
+An algorithm for the broadcast operation requiring $\mathcal{O}(\text{log}_2(P))$ communication steps (where $P$ is the number of processes which must receive the information) is as follows.    In each of $n$ steps, let each process $P_i$ ($i$ = 0, 2, . . . , $P-1$) which has the information, send the information to a process $P_{i+P/2^n}$ which needs it.  Each process communicates with that process which is halfway between itself and either the next process which is already informed or the end of the process array.  For example, if $P$ = 8, we get
+%\begin{table}[h]
+\begin{center}
+\begin{tabular}{l r}
+ $n=1$: & $P_0 \rightarrow P_4$ \\\\
+ $n=2$: & $P_0 \rightarrow P_2$ \\
+	 & $P_4 \rightarrow P_6$\\\\
+ $n=3$: & $P_0 \rightarrow P_1$ \\
+	 & $P_2 \rightarrow P_3$\\
+	 & $P_4 \rightarrow P_5$\\
+	 & $P_6 \rightarrow P_7$
+\end{tabular}
+\end{center}
+%\end{table}
+In this way, the number of active processes doubles with each new step.  Note that if $P = 2^d$ for some integer $d$, then the number of communication steps is exactly $\text{log}_2(P)$, otherwise there will be a number of extra communications which must be carried out.  The number of these "extra" communications will be less than than of another full step however, and thus the dominating term will generally be $\mathcal{O}(\text{log}_2(P))$.
+
+\subsection*{b)}
+Assume that $P = 2^n$.  Let $t_s$, $t_d$, and $w$ be the startup time for each processor, the data transfer time, and the size of the information to be transfered, respectively.  Then we can write the time per step as 
+\ba{
+\text{time per step } = t_s + t_dw.}  
+As mentioned above, the number of steps is $n$.  This gives that the total time can be written 
+\ba{
+\text{total time }=(t_s + t_dw) n = (t_s + t_dw) \cdot \text{log}_2{P}.
+}
+
+\subsection*{c)}
+The scatter operation can be implemented in a similar fashion as the one-to-all broadcast operation described above.  The root process, which contains all the messages intended for the other processes, sends out half the messages in the first step, one fourth of the messages in the second step, and so on.  Say that we have $P-1$ messages, with $M_i$ intended for process $i$, $i$ = 0, 1, . . . , $P-1$.  Then again, as an example with $P$ = 8, we get the following message schedule.  Note that those messages enclosed in parenthesis to the left of the process indicate those messages which are withheld; while those messages which appear above the right arrow indicate those which are sent to the corresponding process.
+\begin{center}
+\begin{tabular}{l r}
+$n=0$:  & $(M_0,M_1,M_2,M_3,M_4,M_5,M_6,M_7) P_0$ \\\\
+ $n=1$: & $(M_0,M_1,M_2,M_3) P_0 \overset{(M_4,M_5,M_6,M_7)}{\longrightarrow} P_4$ \\\\
+ $n=2$: & $(M_0,M_1) P_0 \overset{(M_2,M_3)}{ \longrightarrow} P_2$ \\
+	 & $(M_4,M_5) P_4 \overset{(M_6,M_7) }{\longrightarrow} P_6$\\\\
+ $n=3$: & $(M_0) P_0 \overset{(M_1)}{ \longrightarrow}  P_1$ \\
+	 & $(M_2)P_2 \overset{(M_3)}{ \longrightarrow}  P_3$\\
+	 & $(M_4)P_4 \overset{(M_5)}{ \longrightarrow}  P_5$\\
+	 & $(M_6)P_6 \overset{(M_7)}{ \longrightarrow}    P_7$\\\\
+$n=4$: & $(M_0)P_0$\\
+& $(M_1)P_1$ \\
+& $(M_2)P_2$ \\
+& $(M_3)P_3 $\\
+& $(M_4)P_4 $\\
+& $(M_5)P_5$ \\
+& $(M_6)P_6$ \\
+& $(M_7)P_7$	 
+\end{tabular}
+\end{center}  
+Note that step $n=0$ indicates the initial state, with all messages assembled at the root process (no communication takes place); whereas step $n=4$ represents the final state, with all messages distributed to the proper process (again, no communication takes place).  Thus the task is carried out with the same number of communication steps as the broadcast algorithm, $\mathcal{O}(\text{log}_2(P))$.
+ 
 \section*{Task 2}
+\subsection*{a)}
+\subsection*{b)}
+
 \section*{Task 3}
+
 We now consider the 1-dimensional differential equation
 \ba{
 u'' + r(x)u = & \ f(x), \ \ \ \ \ 0<x<1,\\
