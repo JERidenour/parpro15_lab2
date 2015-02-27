@@ -26,9 +26,6 @@ int main(int argc, char *argv[])
 	u[0]=0.0;
 	u[N]=0.0;
 
-	// //maxdiff
-	// max_diff = 0.0;
-
 	while(max_diff > tol){
 
 		// save old values 
