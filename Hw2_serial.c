@@ -50,7 +50,7 @@ int main(int argc, char *argv[])
     // write to file
  	FILE *fp;
 
-    fp = fopen("u_values.txt", "w");
+    fp = fopen("u_values_jr.txt", "w");
     for (i = 0; i < N+1; i++){
     	fprintf(fp, "%f", u[i]);
         fprintf(fp, "\n");
