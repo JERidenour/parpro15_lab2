@@ -4,7 +4,7 @@
 
 // numerical parameters
 #define N 100
-#define STEP 1.0/(N+1)
+#define STEP 1.0/(N-1)
 #define STEP2 STEP*STEP
 #define TOL 1e-6
 #define MAXITER 10000
@@ -21,25 +21,29 @@ double rfun(const double x) {
 int main(int argc, char *argv[])
 {
 	//double *f, *r, *u1, *u2;
-	double *f = (double *) malloc( (N+1)*sizeof(double) );
-	double *r = (double *) malloc( (N+1)*sizeof(double) );
-	double *u1 = (double *) malloc( (N+1)*sizeof(double) );
-	double *u2 = (double *) malloc( (N+1)*sizeof(double) );
+	double *f = (double *) malloc( (N)*sizeof(double) );
+	double *r = (double *) malloc( (N)*sizeof(double) );
+	double *u1 = (double *) malloc( (N)*sizeof(double) );
+	double *u2 = (double *) malloc( (N)*sizeof(double) );
 
 	// define function values and give initial guess for u:
-	for (int i=0; i<N+1; i++) 	{f[i] = ffun(i*STEP);}
-	for (int i=0; i<N+1; i++) 	{r[i] = rfun(i*STEP);}
+	for (int i=0; i<N; i++) 	{f[i] = ffun(i*STEP);}
+	for (int i=0; i<N; i++) 	{r[i] = rfun(i*STEP);}
 	for (int i=1; i<N; i++) 	{u1[i] = 1.0;}
 
 	// boundary values
-	u1[0] = u2[0] = u1[N] = u2[N] = 0.0;
+	u1[0] = u2[0] = u1[N-1] = u2[N-1] = 0.0;
+	
+	// report
+	printf( "----------------------\n");
+	printf( "N: %d, x0: %2f, x(N-1): %2f, h: %8f.\n", N, 0*STEP, (N-1)*STEP, STEP );
 
 	double max_diff = TOL*2;
 	int iter = 0;
 	while(max_diff > TOL && iter < MAXITER) 
 	{
 		double biggest = 0.0;
-		for(int i=1; i<N; i++)	// iterate inner elements
+		for(int i=1; i<(N-1); i++)	// iterate inner elements
 		{
 			u2[i] = (u1[i-1] + u1[i+1] - STEP2*f[i])/(2.0-STEP2*r[i]);
 
@@ -61,7 +65,7 @@ int main(int argc, char *argv[])
  	FILE *fp;
 
     fp = fopen("u_values_mh.txt", "w");
-    for (int i = 0; i < N+1; i++){
+    for (int i = 0; i < N; i++){
     	fprintf(fp, "%f", u1[i]);
         fprintf(fp, "\n");
     }

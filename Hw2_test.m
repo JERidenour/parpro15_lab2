@@ -1,4 +1,5 @@
 %%
+clear
 load u_values.txt -ascii
 
 u = u_values;

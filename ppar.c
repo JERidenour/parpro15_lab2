@@ -6,7 +6,7 @@
 
 // numerical parameters
 #define N 100
-#define STEP 1.0/(N+1)
+#define STEP 1.0/(N-1)
 #define STEP2 STEP*STEP
 #define TOL 1e-6
 #define MAXITER 10000
@@ -57,7 +57,7 @@ int main(int argc, char *argv[])
 	printf( "Started process # %d, %s, %s, %s.\n", rank, (red ? "red" : "black"),
 		(leftbound ? "leftbound" : "-"),
 		(rightbound ? "rightbound" : "-")  );
-	//printf( "N: %d, L: %d, R: %d, I: %d\n", N, L, R, I );
+	printf( "P: %d, N: %d, L: %d, R: %d, I: %d\n", P, N, L, R, I );
 
 	double *f = (double *) malloc( (I) * sizeof(double) );
 	double *r = (double *) malloc( (I) * sizeof(double) );
