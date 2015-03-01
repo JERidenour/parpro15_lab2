@@ -4,7 +4,6 @@ clear
 clf
 
 
-
 %%
 load u_values_jr.txt -ascii
 
@@ -16,6 +15,7 @@ x=0:h:N*h;
 
 plot(x,u)
 hold on
+axis tight
 
 %%
 
@@ -42,7 +42,9 @@ h3 = 1/(N3);
 
 x3=0:h3:N3*h3;
 
-plot(x3,u3,'r--')
+plot(x3,u3,'m--')
+hold on
+axis tight
 
 %%
 

@@ -5,8 +5,8 @@
 #include <mpi.h>
 
 // numerical parameters
-#define N 100
-#define STEP 1.0/(N-1)
+#define N 100   			// n is [0,N-1]
+#define STEP 1.0/(N-1)		// x is [0.0,1.0]
 #define STEP2 STEP*STEP
 #define TOL 1e-6
 #define MAXITER 10000
@@ -43,20 +43,21 @@ int main(int argc, char *argv[])
 	bool leftbound = rank == 0 ? true : false;
 	/*bool leftbound = false;
 	if (rank == 0) {leftbound = true;}*/
-	bool rightbound = rank == (P-1) ? true : false;
+	bool rightbound = rank == (P - 1) ? true : false;
 	/*bool rightbound = false;
 	if (rank == P - 1) {rightbound = true;}*/
+	int expand = (leftbound || rightbound ? 1 : 2);
 
 	int L = N / P;				// trunc
 	int R = N % P;
-	int I = (N + P - rank - 1) / P;    	// number of local elements
+	int I = ((N + P - rank - 1) / P) + expand;    	// number of inner local elements + 1 or 2
 	//n = p*L+MIN(rank,R)+i; 	// global index for given (p,i)
 
 	// report to console
 	printf( "----------------------\n");
 	printf( "Started process # %d, %s, %s, %s.\n", rank, (red ? "red" : "black"),
-		(leftbound ? "leftbound" : "-"),
-		(rightbound ? "rightbound" : "-")  );
+	        (leftbound ? "leftbound" : "-"),
+	        (rightbound ? "rightbound" : "-")  );
 	printf( "P: %d, N: %d, L: %d, R: %d, I: %d\n", P, N, L, R, I );
 
 	double *f = (double *) malloc( (I) * sizeof(double) );
@@ -187,23 +188,25 @@ int main(int argc, char *argv[])
 	printf( "----------------------\n");
 
 	MPI_Barrier(MPI_COMM_WORLD);
-	
+
 	if (leftbound) {
 		FILE *fp;
 		fp = fopen("u_values_par.txt", "w");
-		for (int i = 0; i < (I - 1); ++i) {	// write left boudary but not right ghost
+		int c = 0;
+		for (int i = 0; i < (I - 1); ++i) {	// write left boundary but not right ghost
 			fprintf(fp, "%f\n", u1[i]);
+			++c;
 		}
-
-		// we expect at most I doubles to arrive, but could be less
+		printf("Leftbound wrote %d own elements.\n", c);
+		// we expect at most I+1 doubles to arrive, but could be less
 		MPI_Status rstat;	// indata info
-		double *rbuf = (double *) malloc( (I) * sizeof(double) ); // inbuffer
+		double *rbuf = (double *) malloc( (I+1) * sizeof(double) ); // inbuffer
 
 		for (int source = 1; source < P; ++source)
 		{
 			// receive all the middle chunks in order, blocking
 			MPI_Recv(	rbuf,
-			            I,
+			            I+1,
 			            MPI_DOUBLE,
 			            source,
 			            source,	// tag
@@ -214,16 +217,18 @@ int main(int argc, char *argv[])
 			MPI_Get_count(&rstat, MPI_DOUBLE, &rsize);	// how many doubles arrived?
 			// we should get more than 0, report if this happens
 			if (rsize == 0) {fprintf(stdout, "Leftbound received 0 elements from process %d!\n", source);}
-
+			printf("Leftbound received %d elements from %d.\n", rsize, source);
 			// include right boundary if this is last chunk
-			int len = rsize - 2;
-			if (source == (P - 1)) {len = rsize - 1;}
+			int end = rsize - 1;
+			if (source == (P - 1)) {end = rsize;}
 
 			// append to file
-			for (int i = 1; i < len; ++i) {
+			int cc = 0;
+			for (int i = 1; i < end; ++i) {
 				fprintf(fp, "%f\n", rbuf[i]);
-
+				++cc;
 			}
+			printf("Leftbound wrote %d elements from %d.\n", cc, source);
 		}
 
 		// cleanup
@@ -240,7 +245,7 @@ int main(int argc, char *argv[])
 		            rank,
 		            MPI_COMM_WORLD);
 	}
-	
+
 	// cleanup
 	free(f);
 	free(r);
@@ -248,6 +253,6 @@ int main(int argc, char *argv[])
 	free(u2);
 	free(g);
 	// over and out
-	MPI_Finalize();	
+	MPI_Finalize();
 	return 0;
 }

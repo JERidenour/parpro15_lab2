@@ -40,7 +40,7 @@ int main(int argc, char *argv[])
 
 	double max_diff = TOL*2;
 	int iter = 0;
-	while(max_diff > TOL && iter < MAXITER) 
+	while(/*max_diff > TOL &&*/ iter < MAXITER) 
 	{
 		double biggest = 0.0;
 		for(int i=1; i<(N-1); i++)	// iterate inner elements
