@@ -1,6 +1,8 @@
 #include <stdio.h>
 #include <math.h>
 #include <stdlib.h>
+#include <stdbool.h>
+#include <mpi.h>
 
 // numerical parameters
 #define N 100
@@ -19,45 +21,33 @@ double rfun(const double x) {
 	return pow(x, 3.0);
 }
 
-/*The idea is a red-black (chequerboard) coloring:
-• Even p: assign red
-• Odd p: assign black
-Communication appears in two steps: red/black and black red:
-     if mycolor == red
-        send(u[Ip_2],p+1);
-        receive(u[Ip-1],p+1);
-        send(u[1],p-1);
-        receive(u[0],p-1);
-else
-        receive(u[0],p-1);
-        send(u[1],p-1);
-        receive(u[Ip-1],p+1);
-        send(u[Ip-2],p+1);
-end
-Communication time is only doubled compared to the previous version.*/
-
 int main(int argc, char *argv[])
 {
-	int P, rank;
+	int P, rank, rc;
 
 	/* Initialize MPI */
-	MPI_Init(&argc, &argv);
-	MPI_Comm_size(MPI_COMM_WORLD, &P);
-	MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+	rc = MPI_Init(&argc, &argv);
+	rc = MPI_Comm_size(MPI_COMM_WORLD, &P);
+	rc = MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 	if (N < P) {
 		fprintf(stdout, "Too few discretization points...\n");
 		exit(1);
 	}
 
-	bool red = true; 				// are we red?
+	// are we red (if not, we are black)?
+	bool red = true;
 	if (rank % 2) {red = false;}	// rank is odd if there exists a remainder
+
+	// are we leftmost or rightmost chunk?
+	bool leftbound = false;
+	if (rank == 0) {leftbound = true;}
+	bool rightbound = false;
+	if (rank == P - 1) {rightbound = true;}
 
 	int L = N / P;				// trunc
 	int R = N % P;
 	int I = (N + P - rank - 1) / P;    	// number of local elements
 	//n = p*L+MIN(rank,R)+i; 	// global index for given (p,i)
-
-	// TODO: set correct values for array sizes
 
 	double *f = (double *) malloc( (I) * sizeof(double) );
 	double *r = (double *) malloc( (I) * sizeof(double) );
@@ -65,12 +55,12 @@ int main(int argc, char *argv[])
 	double *u2 = (double *) malloc( (I) * sizeof(double) );
 
 	// compute global indexes g for each local i
-	int *g = (int*) malloc( (I) * sizeof(int) );	// global index table
+	int *g = (int*) malloc( (I) * sizeof(int) );	// global index lookup table
 	for (int i = 0; i < I; ++i) {
-		g[i] = rank * L + MIN(rank, R) + i;	// global index for given (p,i)
+		g[i] = rank * L + MIN(rank, R) + i;			// global index for given (p,i)
 	}
 
-	// define function values using g[i] * STEP
+	// define function values using x = g[i] * STEP
 	for (int i = 0; i < I; ++i) 	{f[i] = ffun(g[i] * STEP);}
 	for (int i = 0; i < I; ++i) 	{r[i] = rfun(g[i] * STEP);}
 
@@ -78,83 +68,89 @@ int main(int argc, char *argv[])
 	for (int i = 1; i < I; ++i) 	{u1[i] = 1.0;}
 
 	// boundary values
-	if (rank == 0) {u1[0] = u2[0] = 0.0;}			// leftmost chunk
-	if (rank == (P-1)) {u1[I-1] = u2[I-1] = 0.0;}	// rightmost chunk
+	if (leftbound) {u1[0] = u2[0] = 0.0;}
+	if (rightbound) {u1[I - 1] = u2[I - 1] = 0.0;}
 
-	double max_diff = TOL * 2;
-	int iter = 0;
+	double max_diff = TOL * 2;	// bogus value
+	int iter = 0;				// keep track of iterations
 	while (max_diff > TOL && iter < MAXITER)
 	{
-
-		// TODO: RB communication of overlap here
 		if (red) {
-			// send(u[Ip-2],p+1);
-			MPI_Send(	u1 + I - 2,			// void* data
-			            1,					// int count
-			            MPI_DOUBLE,			// MPI_Datatype datatype
-			            rank + 1,			// int destination
-			            666,				// int tag
-			            MPI_COMM_WORLD);	// MPI_Comm communicator
-			// receive(u[Ip-1],p+1);
-			MPI_Recv(	u1 + I - 1,			// void* data
-			            1,					// int count
-			            MPI_DOUBLE,			// MPI_Datatype datatype
-			            rank + 1,			// int source
-			            666,				// int tag
-			            MPI_COMM_WORLD,		// MPI_Comm communicator
-			            MPI_STATUS_IGNORE);	// MPI_Status * status
-			// send(u[1],p-1);
-			MPI_Send(	u1 + 1,
-			            1,
-			            MPI_DOUBLE,
-			            rank - 1,
-			            666,
-			            MPI_COMM_WORLD);
-			//receive(u[0],p-1);
-			MPI_Recv(	u1,
-			            1,
-			            MPI_DOUBLE,
-			            rank - 1,
-			            666,
-			            MPI_COMM_WORLD,
-			            MPI_STATUS_IGNORE);
+			if (!rightbound) {
+				// send(u[Ip-2],p+1);
+				MPI_Send(	u1 + I - 2,			// void* data
+				            1,					// int count
+				            MPI_DOUBLE,			// MPI_Datatype datatype
+				            rank + 1,			// int destination
+				            666,				// int tag
+				            MPI_COMM_WORLD);	// MPI_Comm communicator
+				// receive(u[Ip-1],p+1);
+				MPI_Recv(	u1 + I - 1,			// void* data
+				            1,					// int count
+				            MPI_DOUBLE,			// MPI_Datatype datatype
+				            rank + 1,			// int source
+				            666,				// int tag
+				            MPI_COMM_WORLD,		// MPI_Comm communicator
+				            MPI_STATUS_IGNORE);	// MPI_Status * status
+			}
+			if (!leftbound) {
+				// send(u[1],p-1);
+				MPI_Send(	u1 + 1,
+				            1,
+				            MPI_DOUBLE,
+				            rank - 1,
+				            666,
+				            MPI_COMM_WORLD);
+				//receive(u[0],p-1);
+				MPI_Recv(	u1,
+				            1,
+				            MPI_DOUBLE,
+				            rank - 1,
+				            666,
+				            MPI_COMM_WORLD,
+				            MPI_STATUS_IGNORE);
+			}
 		} else // black
 		{
-			// receive(u[0], p - 1);
-			MPI_Recv(	u1,
-			            1,
-			            MPI_DOUBLE,
-			            rank - 1,
-			            666,
-			            MPI_COMM_WORLD,
-			            MPI_STATUS_IGNORE);
-			// send(u[1], p - 1);
-			MPI_Send(	u1 + 1,
-			            1,
-			            MPI_DOUBLE,
-			            rank - 1,
-			            666,
-			            MPI_COMM_WORLD);
-			// receive(u[Ip - 1], p + 1);
-			MPI_Recv(	u1 + I - 1,
-			            1,
-			            MPI_DOUBLE,
-			            rank + 1,
-			            666,
-			            MPI_COMM_WORLD,
-			            MPI_STATUS_IGNORE);
-			// send(u[Ip - 2], p + 1);
-			MPI_Send(	u1 + I - 2,
-			            1,
-			            MPI_DOUBLE,
-			            rank + 1,
-			            666,
-			            MPI_COMM_WORLD);
+			if (!leftbound) {
+				// receive(u[0], p - 1);
+				MPI_Recv(	u1,
+				            1,
+				            MPI_DOUBLE,
+				            rank - 1,
+				            666,
+				            MPI_COMM_WORLD,
+				            MPI_STATUS_IGNORE);
+				// send(u[1], p - 1);
+				MPI_Send(	u1 + 1,
+				            1,
+				            MPI_DOUBLE,
+				            rank - 1,
+				            666,
+				            MPI_COMM_WORLD);
+			}
+			if (!rightbound) {
+				// receive(u[Ip - 1], p + 1);
+				MPI_Recv(	u1 + I - 1,
+				            1,
+				            MPI_DOUBLE,
+				            rank + 1,
+				            666,
+				            MPI_COMM_WORLD,
+				            MPI_STATUS_IGNORE);
+				// send(u[Ip - 2], p + 1);
+				MPI_Send(	u1 + I - 2,
+				            1,
+				            MPI_DOUBLE,
+				            rank + 1,
+				            666,
+				            MPI_COMM_WORLD);
+			}
 		}
 
 		// TODO: rewrite below as the local iteration step
 		double biggest = 0.0;
-		for (int i = 1; i < N; i++)	// iterate inner elements
+		for (int i = 1; i < (I-1); i++)	// iterate inner elements
 		{
 			// unlike this, Hanke uses i,i+2 and assumes shifted f and r arrays
 			u2[i] = (u1[i - 1] + u1[i + 1] - STEP2 * f[i]) / (2.0 - STEP2 * r[i]);
@@ -173,7 +169,7 @@ int main(int argc, char *argv[])
 		u2 = utemp;		// u2 will be overwritten next iteration
 	}
 
-	// TODO: rewrite
+	// TODO: rewrite filewriter
 
 	// write to file
 	FILE *fp;
