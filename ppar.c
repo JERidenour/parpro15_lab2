@@ -5,11 +5,12 @@
 #include <mpi.h>
 
 // numerical parameters
-#define N 100   			// n is [0,N-1]
-#define STEP 1.0/(N-1)		// x is [0.0,1.0]
+#define N 1000   			// n is [0,N-1]
+//#define STEP 1.0/(N-1)
+#define STEP 1.0/(N+1)		// x is [h,1.0-h] because we expanded u with 2
 #define STEP2 STEP*STEP
 #define TOL 1e-6
-#define MAXITER 10000
+#define MAXITER 100000
 
 #define MIN(a,b) ((a) < (b) ? (a) : (b))
 
@@ -46,11 +47,13 @@ int main(int argc, char *argv[])
 	bool rightbound = rank == (P - 1) ? true : false;
 	/*bool rightbound = false;
 	if (rank == P - 1) {rightbound = true;}*/
-	int expand = (leftbound || rightbound ? 1 : 2);
+	//int expand = (leftbound || rightbound ? 1 : 2);
+	int expand = 2;
 
 	int L = N / P;				// trunc
 	int R = N % P;
-	int I = ((N + P - rank - 1) / P) + expand;    	// number of inner local elements + 1 or 2
+	int I = ((N + P - rank - 1) / P);    	// number of inner local elements
+	int Ie = I + expand;
 	//n = p*L+MIN(rank,R)+i; 	// global index for given (p,i)
 
 	// report to console
@@ -58,29 +61,32 @@ int main(int argc, char *argv[])
 	printf( "Started process # %d, %s, %s, %s.\n", rank, (red ? "red" : "black"),
 	        (leftbound ? "leftbound" : "-"),
 	        (rightbound ? "rightbound" : "-")  );
-	printf( "P: %d, N: %d, L: %d, R: %d, I: %d\n", P, N, L, R, I );
+	printf( "Process # %d, P: %d, N: %d, h: %8f L: %d, R: %d, I: %d, Ie: %d\n",rank, P, N, STEP, L, R, I, Ie );
 
-	double *f = (double *) malloc( (I) * sizeof(double) );
-	double *r = (double *) malloc( (I) * sizeof(double) );
-	double *u1 = (double *) malloc( (I) * sizeof(double) );
-	double *u2 = (double *) malloc( (I) * sizeof(double) );
+
+	double *f = (double *) malloc( (Ie) * sizeof(double) );
+	double *r = (double *) malloc( (Ie) * sizeof(double) );
+	double *u1 = (double *) malloc( (Ie) * sizeof(double) );
+	double *u2 = (double *) malloc( (Ie) * sizeof(double) );
 
 	// compute global indexes g for each local i
-	int *g = (int*) malloc( (I) * sizeof(int) );	// global index lookup table
-	for (int i = 0; i < I; ++i) {
+	int *g = (int*) malloc( (Ie) * sizeof(int) );	// global index lookup table
+	for (int i = 0; i < Ie; ++i) {
 		g[i] = rank * L + MIN(rank, R) + i;			// global index for given (p,i)
 	}
 
+	printf( "Process # %d, g[0]: %d, g[1]: %d, g[end-1]: %d, g[end]: %d\n", rank, g[0], g[1], g[Ie-2], g[Ie-1]);
+
 	// define function values using x = g[i] * STEP
-	for (int i = 0; i < I; ++i) 	{f[i] = ffun(g[i] * STEP);}
-	for (int i = 0; i < I; ++i) 	{r[i] = rfun(g[i] * STEP);}
+	for (int i = 0; i < Ie; ++i) 	{f[i] = ffun(g[i] * STEP);}
+	for (int i = 0; i < Ie; ++i) 	{r[i] = rfun(g[i] * STEP);}
 
 	// initial guess for u
-	for (int i = 0; i < I; ++i) 	{u1[i] = 1.0;}
+	for (int i = 0; i < Ie; ++i) 	{u1[i] = 1.0;}
 
 	// boundary values
 	if (leftbound) {u1[0] = u2[0] = 0.0;}
-	if (rightbound) {u1[I - 1] = u2[I - 1] = 0.0;}
+	if (rightbound) {u1[Ie - 1] = u2[Ie - 1] = 0.0;}
 
 	double max_diff = TOL * 2;	// bogus value
 	int iter = 0;				// keep track of iterations
@@ -90,14 +96,14 @@ int main(int argc, char *argv[])
 		if (red) {
 			if (!rightbound) {
 				// send(u[Ip-2],p+1);
-				MPI_Send(	u1 + I - 2,			// void* data
+				MPI_Send(	u1 + Ie - 2,			// void* data
 				            1,					// int count
 				            MPI_DOUBLE,			// MPI_Datatype datatype
 				            rank + 1,			// int destination
 				            1,				// int tag
 				            MPI_COMM_WORLD);	// MPI_Comm communicator
 				// receive(u[Ip-1],p+1);
-				MPI_Recv(	u1 + I - 1,			// void* data
+				MPI_Recv(	u1 + Ie - 1,			// void* data
 				            1,					// int count
 				            MPI_DOUBLE,			// MPI_Datatype datatype
 				            rank + 1,			// int source
@@ -143,7 +149,7 @@ int main(int argc, char *argv[])
 			}
 			if (!rightbound) {
 				// receive(u[Ip - 1], p + 1);
-				MPI_Recv(	u1 + I - 1,
+				MPI_Recv(	u1 + Ie - 1,
 				            1,
 				            MPI_DOUBLE,
 				            rank + 1,
@@ -151,7 +157,7 @@ int main(int argc, char *argv[])
 				            MPI_COMM_WORLD,
 				            MPI_STATUS_IGNORE);
 				// send(u[Ip - 2], p + 1);
-				MPI_Send(	u1 + I - 2,
+				MPI_Send(	u1 + Ie - 2,
 				            1,
 				            MPI_DOUBLE,
 				            rank + 1,
@@ -160,19 +166,18 @@ int main(int argc, char *argv[])
 			}
 		}
 
-		// TODO: rewrite below as the local iteration step
 		double biggest = 0.0;
-		for (int i = 1; i < (I - 1); i++)	// iterate inner elements
+		for (int i = 1; i < (Ie - 1); i++)	// iterate inner elements
 		{
 			// unlike this, Hanke uses i,i+2 and assumes shifted f and r arrays
 			u2[i] = (u1[i - 1] + u1[i + 1] - STEP2 * f[i]) / (2.0 - STEP2 * r[i]);
 
-			double current_diff = fabs(u1[i] - u2[i]);
+			/*double current_diff = fabs(u1[i] - u2[i]);
 			if (current_diff > biggest) {
 				biggest = current_diff;
-			}
+			}*/
 		}
-		max_diff = biggest;
+		//max_diff = biggest;
 		++iter;
 
 		// swap buffers
@@ -183,9 +188,9 @@ int main(int argc, char *argv[])
 
 	// report to console
 	printf( "Process # %d done iteration.\n", rank);
-	printf( "max_diff: %8f\n", max_diff );
-	printf("iterations: %d\n", iter);
-	printf( "----------------------\n");
+	//printf( "max_diff: %8f\n", max_diff );
+	//printf("iterations: %d\n", iter);
+	//printf( "----------------------\n");
 
 	MPI_Barrier(MPI_COMM_WORLD);
 
@@ -193,20 +198,20 @@ int main(int argc, char *argv[])
 		FILE *fp;
 		fp = fopen("u_values_par.txt", "w");
 		int c = 0;
-		for (int i = 0; i < (I - 1); ++i) {	// write left boundary but not right ghost
+		for (int i = 0; i < (Ie - 1); ++i) {	// write left boundary but not right ghost
 			fprintf(fp, "%f\n", u1[i]);
 			++c;
 		}
 		printf("Leftbound wrote %d own elements.\n", c);
-		// we expect at most I+1 doubles to arrive, but could be less
+		// we expect at most I+2 doubles to arrive, but could be less
 		MPI_Status rstat;	// indata info
-		double *rbuf = (double *) malloc( (I+1) * sizeof(double) ); // inbuffer
+		double *rbuf = (double *) malloc( (Ie + 2) * sizeof(double) ); // inbuffer
 
 		for (int source = 1; source < P; ++source)
 		{
 			// receive all the middle chunks in order, blocking
 			MPI_Recv(	rbuf,
-			            I+1,
+			            Ie + 2,
 			            MPI_DOUBLE,
 			            source,
 			            source,	// tag
@@ -239,7 +244,7 @@ int main(int argc, char *argv[])
 	{
 		// send what you got to leftbound
 		MPI_Send(	u1,
-		            I,
+		            Ie,
 		            MPI_DOUBLE,
 		            0,
 		            rank,

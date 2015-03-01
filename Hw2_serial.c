@@ -3,10 +3,10 @@
 #include <stdlib.h>
 
 // numerical parameters
-#define N 100
+#define N 1000
 #define h 1.0/(N+1)
 #define tol 1e-6
-
+#define MAXITER 100000
 
 int main(int argc, char *argv[])
 {
@@ -26,7 +26,8 @@ int main(int argc, char *argv[])
 	u[0]=0.0;
 	u[N]=0.0;
 
-	while(max_diff > tol){
+	int iter = 0;
+	while(iter < MAXITER){
 
 		// save old values 
 		for (i=0; i<N+1; i++){
@@ -45,6 +46,7 @@ int main(int argc, char *argv[])
 		}
 
 		max_diff = biggest;
+		++iter;
 	}
 
     // write to file

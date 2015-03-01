@@ -4,16 +4,17 @@ clear
 clf
 
 
+
 %%
 load u_values_jr.txt -ascii
 
 u = u_values_jr;
-N = 100;
+N = length(u_values_jr)
 h = 1/(N+1);
 
-x=0:h:N*h;
+x=0:h:(N-1)*h;
 
-plot(x,u)
+plot(x',u,'b:')
 hold on
 axis tight
 
@@ -27,7 +28,7 @@ h2 = 1/(N2-1)
 
 x2=0:h2:1;  % x: [0 , 1]
 
-plot(x2,u2,'r--');
+plot(x2,u2,'m');
 hold on
 axis tight
 
@@ -40,17 +41,13 @@ u3 = u_values_par;
 N3 = length(u3)-1;
 h3 = 1/(N3);
 
+
 x3=0:h3:N3*h3;
 
-plot(x3,u3,'m--')
+plot(x3,u3,'k')
 hold on
 axis tight
 
 %%
 
-clear
 
-N = 10
-h = 1/N+1
-x=0:h:(N-1)*h
-length(x)

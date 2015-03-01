@@ -3,11 +3,11 @@
 #include <stdlib.h>
 
 // numerical parameters
-#define N 100
+#define N 1000
 #define STEP 1.0/(N-1)
 #define STEP2 STEP*STEP
 #define TOL 1e-6
-#define MAXITER 10000
+#define MAXITER 100000
 
 // the f and r coeff functions
 double ffun(const double x) {
