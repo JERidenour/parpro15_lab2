@@ -35,20 +35,29 @@ int main(int argc, char *argv[])
 	}
 
 	// are we red (if not, we are black)?
-	bool red = true;
-	if (rank % 2) {red = false;}	// rank is odd if there exists a remainder
+	bool red = (rank % 2) ? false : true;
+	//bool red = true;
+	//if (rank % 2) {red = false;}	// rank is odd if there exists a remainder
 
 	// are we leftmost or rightmost chunk?
-	//bool leftbound = rank == 0 ? true : false;
-	bool leftbound = false;
-	if (rank == 0) {leftbound = true;}
-	bool rightbound = false;
-	if (rank == P - 1) {rightbound = true;}
+	bool leftbound = rank == 0 ? true : false;
+	/*bool leftbound = false;
+	if (rank == 0) {leftbound = true;}*/
+	bool rightbound = rank == (P-1) ? true : false;
+	/*bool rightbound = false;
+	if (rank == P - 1) {rightbound = true;}*/
 
 	int L = N / P;				// trunc
 	int R = N % P;
 	int I = (N + P - rank - 1) / P;    	// number of local elements
 	//n = p*L+MIN(rank,R)+i; 	// global index for given (p,i)
+
+	// report to console
+	printf( "----------------------\n");
+	printf( "Started process # %d, %s, %s, %s.\n", rank, (red ? "red" : "black"),
+		(leftbound ? "leftbound" : "-"),
+		(rightbound ? "rightbound" : "-")  );
+	//printf( "N: %d, L: %d, R: %d, I: %d\n", N, L, R, I );
 
 	double *f = (double *) malloc( (I) * sizeof(double) );
 	double *r = (double *) malloc( (I) * sizeof(double) );
@@ -74,8 +83,9 @@ int main(int argc, char *argv[])
 
 	double max_diff = TOL * 2;	// bogus value
 	int iter = 0;				// keep track of iterations
-	while (max_diff > TOL && iter < MAXITER)
+	while (/*max_diff > TOL &&*/ iter < MAXITER)	// each process needs to iterate same amount
 	{
+		//printf( "-process # %d, iter %d.\n", rank, iter);
 		if (red) {
 			if (!rightbound) {
 				// send(u[Ip-2],p+1);
@@ -83,14 +93,14 @@ int main(int argc, char *argv[])
 				            1,					// int count
 				            MPI_DOUBLE,			// MPI_Datatype datatype
 				            rank + 1,			// int destination
-				            666,				// int tag
+				            1,				// int tag
 				            MPI_COMM_WORLD);	// MPI_Comm communicator
 				// receive(u[Ip-1],p+1);
 				MPI_Recv(	u1 + I - 1,			// void* data
 				            1,					// int count
 				            MPI_DOUBLE,			// MPI_Datatype datatype
 				            rank + 1,			// int source
-				            666,				// int tag
+				            2,				// int tag
 				            MPI_COMM_WORLD,		// MPI_Comm communicator
 				            MPI_STATUS_IGNORE);	// MPI_Status * status
 			}
@@ -100,14 +110,14 @@ int main(int argc, char *argv[])
 				            1,
 				            MPI_DOUBLE,
 				            rank - 1,
-				            666,
+				            3,
 				            MPI_COMM_WORLD);
 				//receive(u[0],p-1);
 				MPI_Recv(	u1,
 				            1,
 				            MPI_DOUBLE,
 				            rank - 1,
-				            666,
+				            4,
 				            MPI_COMM_WORLD,
 				            MPI_STATUS_IGNORE);
 			}
@@ -119,7 +129,7 @@ int main(int argc, char *argv[])
 				            1,
 				            MPI_DOUBLE,
 				            rank - 1,
-				            666,
+				            1,
 				            MPI_COMM_WORLD,
 				            MPI_STATUS_IGNORE);
 				// send(u[1], p - 1);
@@ -127,7 +137,7 @@ int main(int argc, char *argv[])
 				            1,
 				            MPI_DOUBLE,
 				            rank - 1,
-				            666,
+				            2,
 				            MPI_COMM_WORLD);
 			}
 			if (!rightbound) {
@@ -136,7 +146,7 @@ int main(int argc, char *argv[])
 				            1,
 				            MPI_DOUBLE,
 				            rank + 1,
-				            666,
+				            3,
 				            MPI_COMM_WORLD,
 				            MPI_STATUS_IGNORE);
 				// send(u[Ip - 2], p + 1);
@@ -144,7 +154,7 @@ int main(int argc, char *argv[])
 				            1,
 				            MPI_DOUBLE,
 				            rank + 1,
-				            666,
+				            4,
 				            MPI_COMM_WORLD);
 			}
 		}
@@ -171,20 +181,18 @@ int main(int argc, char *argv[])
 	}
 
 	// report to console
-	printf( "----------------------");
-	printf( "process # %d\n", rank );
+	printf( "Process # %d done iteration.\n", rank);
 	printf( "max_diff: %8f\n", max_diff );
 	printf("iterations: %d\n", iter);
-	printf( "----------------------");
+	printf( "----------------------\n");
 
-	// TODO: rewrite filewriter
-
+	MPI_Barrier(MPI_COMM_WORLD);
+	
 	if (leftbound) {
 		FILE *fp;
 		fp = fopen("u_values_par.txt", "w");
 		for (int i = 0; i < (I - 1); ++i) {	// write left boudary but not right ghost
-			fprintf(fp, "%f", u1[i]);
-			//fprintf(fp, "\n");
+			fprintf(fp, "%f\n", u1[i]);
 		}
 
 		// we expect at most I doubles to arrive, but could be less
@@ -198,7 +206,7 @@ int main(int argc, char *argv[])
 			            I,
 			            MPI_DOUBLE,
 			            source,
-			            666,
+			            source,	// tag
 			            MPI_COMM_WORLD,
 			            &rstat);
 
@@ -213,12 +221,14 @@ int main(int argc, char *argv[])
 
 			// append to file
 			for (int i = 1; i < len; ++i) {
-				fprintf(fp, "%f", rbuf[i]);
+				fprintf(fp, "%f\n", rbuf[i]);
 
 			}
 		}
 
+		// cleanup
 		fclose(fp);
+		free(rbuf);
 
 	} else // we are one of the others
 	{
@@ -227,11 +237,17 @@ int main(int argc, char *argv[])
 		            I,
 		            MPI_DOUBLE,
 		            0,
-		            666,
+		            rank,
 		            MPI_COMM_WORLD);
 	}
-
+	
+	// cleanup
+	free(f);
+	free(r);
+	free(u1);
+	free(u2);
+	free(g);
 	// over and out
-	MPI_Finalize();
+	MPI_Finalize();	
 	return 0;
 }
