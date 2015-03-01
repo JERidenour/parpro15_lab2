@@ -39,6 +39,7 @@ int main(int argc, char *argv[])
 	if (rank % 2) {red = false;}	// rank is odd if there exists a remainder
 
 	// are we leftmost or rightmost chunk?
+	//bool leftbound = rank == 0 ? true : false;
 	bool leftbound = false;
 	if (rank == 0) {leftbound = true;}
 	bool rightbound = false;
@@ -65,7 +66,7 @@ int main(int argc, char *argv[])
 	for (int i = 0; i < I; ++i) 	{r[i] = rfun(g[i] * STEP);}
 
 	// initial guess for u
-	for (int i = 1; i < I; ++i) 	{u1[i] = 1.0;}
+	for (int i = 0; i < I; ++i) 	{u1[i] = 1.0;}
 
 	// boundary values
 	if (leftbound) {u1[0] = u2[0] = 0.0;}
@@ -150,7 +151,7 @@ int main(int argc, char *argv[])
 
 		// TODO: rewrite below as the local iteration step
 		double biggest = 0.0;
-		for (int i = 1; i < (I-1); i++)	// iterate inner elements
+		for (int i = 1; i < (I - 1); i++)	// iterate inner elements
 		{
 			// unlike this, Hanke uses i,i+2 and assumes shifted f and r arrays
 			u2[i] = (u1[i - 1] + u1[i + 1] - STEP2 * f[i]) / (2.0 - STEP2 * r[i]);
@@ -169,23 +170,68 @@ int main(int argc, char *argv[])
 		u2 = utemp;		// u2 will be overwritten next iteration
 	}
 
-	// TODO: rewrite filewriter
-
-	// write to file
-	FILE *fp;
-
-	fp = fopen("u_values_mh.txt", "w");
-	for (int i = 0; i < N + 1; i++) {
-		fprintf(fp, "%f", u1[i]);
-		fprintf(fp, "\n");
-	}
-
-	fclose(fp);
-
-	// show the maximum difference:
+	// report to console
+	printf( "----------------------");
+	printf( "process # %d\n", rank );
 	printf( "max_diff: %8f\n", max_diff );
 	printf("iterations: %d\n", iter);
+	printf( "----------------------");
 
+	// TODO: rewrite filewriter
 
+	if (leftbound) {
+		FILE *fp;
+		fp = fopen("u_values_par.txt", "w");
+		for (int i = 0; i < (I - 1); ++i) {	// write left boudary but not right ghost
+			fprintf(fp, "%f", u1[i]);
+			//fprintf(fp, "\n");
+		}
+
+		// we expect at most I doubles to arrive, but could be less
+		MPI_Status rstat;	// indata info
+		double *rbuf = (double *) malloc( (I) * sizeof(double) ); // inbuffer
+
+		for (int source = 1; source < P; ++source)
+		{
+			// receive all the middle chunks in order, blocking
+			MPI_Recv(	rbuf,
+			            I,
+			            MPI_DOUBLE,
+			            source,
+			            666,
+			            MPI_COMM_WORLD,
+			            &rstat);
+
+			int rsize = 0;
+			MPI_Get_count(&rstat, MPI_DOUBLE, &rsize);	// how many doubles arrived?
+			// we should get more than 0, report if this happens
+			if (rsize == 0) {fprintf(stdout, "Leftbound received 0 elements from process %d!\n", source);}
+
+			// include right boundary if this is last chunk
+			int len = rsize - 2;
+			if (source == (P - 1)) {len = rsize - 1;}
+
+			// append to file
+			for (int i = 1; i < len; ++i) {
+				fprintf(fp, "%f", rbuf[i]);
+
+			}
+		}
+
+		fclose(fp);
+
+	} else // we are one of the others
+	{
+		// send what you got to leftbound
+		MPI_Send(	u1,
+		            I,
+		            MPI_DOUBLE,
+		            0,
+		            666,
+		            MPI_COMM_WORLD);
+	}
+
+	// over and out
+	MPI_Finalize();
 	return 0;
 }
