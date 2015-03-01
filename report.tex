@@ -110,8 +110,39 @@ Note that step $n=0$ indicates the initial state, with all messages assembled at
  
 \section*{Task 2}
 \subsection*{a)}
-\subsection*{b)}
+Let a $[P \times P]$ matrix $A$, a $[P \times 1]$ vector $\vec{x}$, and a $[P \times 1]$ vector $\vec{y}$, be distributed across a $P \times P$ process mesh such that the multiplication $\vec{y} = A \vec{x}$ has just been calculated.  Then component $i$ of $\vec{y}$ is stored on process $i$.  What we want is to transpose $\vec{y}$ so that all components of  $\vec{y}$ will be on all processes.  The algorithm is as follows.  Let the processes in the mesh communicate first "row-wise" then "column-wise."  In the first communication phase, each process on a row in the mesh will send it's value to the others on the row, as well as receive a value from each of them.  Each process sends a cluster of messages intended for the processes in the column above each row process.  In the second phase, processes will communicate with those in the same column, passing along the information they received from the processes in their row.  If we, for example, let $P=2$, then we get the following communication schedule (using the same notation as in Task 1):
+\begin{center}
+\begin{tabular}{l r}
+$n=0$: & $(y_0, y_0, y_0, y_0)P_0$\\
+& $(y_1, y_1, y_1, y_1)P_1$ \\
+& $(y_2, y_2, y_2, y_2)P_2$ \\
+& $(y_3, y_3, y_3, y_3)P_3 $ \\ \\
+$n=1$: & $(y_0,y_0) P_0 \overset{(y_0,y_0)}{ \longrightarrow} P_1$ \\
+& $(y_1,y_1) P_1 \overset{(y_1,y_1)}{ \longrightarrow} P_0$ \\
+& $(y_2,y_2) P_2 \overset{(y_2,y_2)}{ \longrightarrow} P_3$ \\
+& $(y_3,y_3) P_3 \overset{(y_3,y_3)}{ \longrightarrow} P_2$ \\ \\
+$n=2$: & $(y_0,y_1) P_0 \overset{(y_0,y_1)}{ \longrightarrow} P_2$ \\
+& $(y_0,y_1) P_1 \overset{(y_0,y_1)}{ \longrightarrow} P_3$ \\
+& $(y_2,y_3) P_2 \overset{(y_2,y_3)}{ \longrightarrow} P_0$ \\
+& $(y_2,y_3) P_3 \overset{(y_2,y_3)}{ \longrightarrow} P_1$ \\ \\
+$n=3$: & $(y_0, y_1, y_2, y_3)P_0$\\
+& $(y_0, y_1, y_2, y_3)P_1$ \\
+& $(y_0, y_1, y_2, y_3)P_2$ \\
+& $(y_0, y_1, y_2, y_3)P_3 $ 
+\end{tabular}
+\end{center}  
 
+\subsection*{b)}
+In the simple example above, each process sends and receives only one message in each phase.  However in the general case, each process sends and receives one message from each of the other processes in the row (in the case of $2 \times 2$ there is only one other process in the row).  
+
+The size of the clustered messages will be $w \cdot P$ given that the components of $\vec{y}$ are of size $w$. The number of processes per row is of course $P$ and the number of messages sent per process is $P-1$.  This gives the time per phase as
+\ba{
+\text{time per phase} = (t_s + t_d \cdot wP)(P-1)P.
+}
+Since the process mesh is two dimensional, there will be two such phases.  This gives the total time as
+\ba{
+\text{total time} = 2(t_s + t_d \cdot wP)(P-1)P.
+}
 \section*{Task 3}
 
 We now consider the 1-dimensional differential equation
