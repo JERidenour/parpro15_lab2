@@ -15,7 +15,7 @@ hold on
 %%
 
 
-N = 100;
+N = 1000;
 h = 1/(N+1);
 tol= 1e-6;
 max_diff = 1;
@@ -30,7 +30,7 @@ u(1)=0;
 u(N+1)=0;
 
 while max_diff > tol
-    display(max_diff)
+    %display(max_diff);
     %pause(1)
    prev_u=u;
    for n = 2:N
