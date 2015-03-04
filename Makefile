@@ -10,7 +10,7 @@ CXXFLAGS = -std=c99 -Wall -ferror-limit=1 $(DEBUG)
 
 ################################
 
-all: Hw2_serial pseq ppar
+all: Hw2_serial pseq pseq_gs ppar
 
 Hw2_serial_dep = Hw2_serial.o
 Hw2_serial: $(Hw2_serial_dep)
@@ -25,6 +25,13 @@ pseq: $(pseq_dep)
 
 pseq.o: pseq.c
 	$(CXX) $(CXXFLAGS) -c -o $@ pseq.c
+
+pseq_gs_dep = pseq_gs.o
+pseq_gs: $(pseq_gs_dep)
+	$(CXX) $(CXXFLAGS) $(pseq_gs_dep) -o $@
+
+pseq_gs.o: pseq_gs.c
+	$(CXX) $(CXXFLAGS) -c -o $@ pseq_gs.c
 
 ppar_dep = ppar.o
 ppar: $(ppar_dep)

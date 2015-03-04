@@ -24,7 +24,7 @@ int main(int argc, char *argv[])
 	double *f = (double *) malloc( (N)*sizeof(double) );
 	double *r = (double *) malloc( (N)*sizeof(double) );
 	double *u1 = (double *) malloc( (N)*sizeof(double) );
-	double *u2 = (double *) malloc( (N)*sizeof(double) );
+	//double *u2 = (double *) malloc( (N)*sizeof(double) );
 
 	// define function values and give initial guess for u:
 	for (int i=0; i<N; i++) 	{f[i] = ffun(i*STEP);}
@@ -32,7 +32,8 @@ int main(int argc, char *argv[])
 	for (int i=1; i<N; i++) 	{u1[i] = 1.0;}
 
 	// boundary values
-	u1[0] = u2[0] = u1[N-1] = u2[N-1] = 0.0;
+	//u1[0] = u2[0] = u1[N-1] = u2[N-1] = 0.0;
+	u1[0] = u1[N-1] = 0.0;
 	
 	// report
 	printf( "----------------------\n");
@@ -45,9 +46,11 @@ int main(int argc, char *argv[])
 		double biggest = 0.0;
 		for(int i=1; i<(N-1); i++)	// iterate inner elements
 		{
-			u2[i] = (u1[i-1] + u1[i+1] - STEP2*f[i])/(2.0-STEP2*r[i]);
+			//u2[i] = (u1[i-1] + u1[i+1] - STEP2*f[i])/(2.0-STEP2*r[i]);
+			double old = u1[i];
+			u1[i] = (u1[i-1] + u1[i+1] - STEP2*f[i])/(2.0-STEP2*r[i]);
 
-			double current_diff = fabs(u1[i] - u2[i]);
+			double current_diff = fabs(old - u1[i]);
 			if(current_diff > biggest){
 				biggest = current_diff;
 			}
@@ -56,15 +59,17 @@ int main(int argc, char *argv[])
 		++iter;
 
 		// swap buffers
+		/*
 		double *utemp = u1;
 		u1 = u2;		// now u1 points to the new values
 		u2 = utemp;		// u2 will be overwritten next iteration
+		*/
 	}
 
     // write to file
  	FILE *fp;
 
-    fp = fopen("u_values_mh.txt", "w");
+    fp = fopen("u_values_gs.txt", "w");
     for (int i = 0; i < N; i++){
     	fprintf(fp, "%f", u1[i]);
         fprintf(fp, "\n");

@@ -32,6 +32,19 @@ plot(x2,u2,'m');
 hold on
 axis tight
 
+%%
+
+load u_values_gs.txt -ascii
+
+ugs = u_values_gs;
+Ngs = length(ugs)
+hgs = 1/(Ngs-1)
+
+xgs=0:hgs:1;  % x: [0 , 1]
+
+plot(xgs,ugs,'k--');
+hold on
+axis tight
 
 %%
 
